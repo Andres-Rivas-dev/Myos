@@ -4,7 +4,7 @@ CFLAGS  = -std=gnu99 -ffreestanding -O2 -Wall -Wextra
 ASFLAGS = -f elf32
 LDFLAGS = -ffreestanding -O2 -nostdlib -lgcc
 
-OBJS = boot/boot.o kernel/kernel.o kernel/gdt.o kernel/gdt_asm.o kernel/idt.o kernel/idt_asm.o drivers/vga.o drivers/keyboard.o
+OBJS = boot/boot.o kernel/kernel.o kernel/gdt.o kernel/gdt_asm.o kernel/idt.o kernel/idt_asm.o drivers/vga.o drivers/keyboard.o lib/string.o shell/shell.o
 
 all: myos.iso
 
@@ -31,6 +31,12 @@ drivers/vga.o: drivers/vga.c
 
 drivers/keyboard.o: drivers/keyboard.c
 	$(CC) -c drivers/keyboard.c -o drivers/keyboard.o $(CFLAGS) -I drivers/
+
+lib/string.o: lib/string.c
+	$(CC) -c lib/string.c -o lib/string.o $(CFLAGS) -I lib/
+
+shell/shell.o: shell/shell.c
+	$(CC) -c shell/shell.c -o shell/shell.o $(CFLAGS) -I drivers/ -I lib/ -I shell/
 
 myos.bin: $(OBJS)
 	$(CC) -T linker.ld -o myos.bin $(LDFLAGS) $(OBJS)

@@ -2,6 +2,7 @@
 #include "idt.h"
 #include "../drivers/vga.h"
 #include "../drivers/keyboard.h"
+#include "../shell/shell.h"
 
 void kernel_main(void) {
     gdt_init();
@@ -12,13 +13,12 @@ void kernel_main(void) {
     __asm__ volatile ("sti");
 
     vga_print("MyOS v0.1 - UFG 2025\n");
-    vga_print("Integrantes: Stefano, Bryan, Kenneth, Andres\n");
-    vga_print("\nEscribe algo:\n");
+    vga_print("GDT OK | IDT OK | Teclado OK\n");
+    vga_print("================================\n");
 
-    while (1) {
-        char c = keyboard_getchar();
-        if (c) vga_putchar(c);
-    }
+    shell_run();
+
+    for(;;) {}
 }
 
 
