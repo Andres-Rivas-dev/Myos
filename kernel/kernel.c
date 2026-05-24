@@ -1,19 +1,24 @@
 #include "gdt.h"
 #include "idt.h"
+#include "../drivers/vga.h"
+#include "../drivers/keyboard.h"
 
 void kernel_main(void) {
     gdt_init();
     idt_init();
+    vga_init();
+    keyboard_init();
 
     __asm__ volatile ("sti");
 
-    volatile unsigned short* vga = (unsigned short*)0xB8000;
-    const char* msg = "MyOS v0.1 - GDT+IDT OK | UFG 2025";
-    int i;
-    for (i = 0; msg[i] != 0; i++) {
-        vga[i] = (unsigned short)msg[i] | (0x0A << 8);
+    vga_print("MyOS v0.1 - UFG 2025\n");
+    vga_print("Integrantes: Stefano, Bryan, Kenneth, Andres\n");
+    vga_print("\nEscribe algo:\n");
+
+    while (1) {
+        char c = keyboard_getchar();
+        if (c) vga_putchar(c);
     }
-    for(;;) {}
 }
 
 

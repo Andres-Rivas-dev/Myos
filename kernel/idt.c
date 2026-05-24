@@ -5,6 +5,7 @@ static struct idt_entry idt[256];
 static struct idt_ptr   idtp;
 
 extern void idt_flush(uint32_t);
+extern void keyboard_irq_handler();
 
 extern void isr0();  extern void isr1();  extern void isr2();
 extern void isr3();  extern void isr4();  extern void isr5();
@@ -50,7 +51,10 @@ void isr_handler(struct regs* r) {
 }
 
 void irq_handler(struct regs* r) {
-    if (r->int_no >= 40)
+    if (r->int_no == 33) {
+	keyboard_irq_handler();
+}
+	if (r->int_no >=  40)
         outb(0xA0, 0x20);
     outb(0x20, 0x20);
 }

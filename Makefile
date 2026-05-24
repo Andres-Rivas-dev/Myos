@@ -4,7 +4,7 @@ CFLAGS  = -std=gnu99 -ffreestanding -O2 -Wall -Wextra
 ASFLAGS = -f elf32
 LDFLAGS = -ffreestanding -O2 -nostdlib -lgcc
 
-OBJS = boot/boot.o kernel/kernel.o kernel/gdt.o kernel/gdt_asm.o kernel/idt.o kernel/idt_asm.o
+OBJS = boot/boot.o kernel/kernel.o kernel/gdt.o kernel/gdt_asm.o kernel/idt.o kernel/idt_asm.o drivers/vga.o drivers/keyboard.o
 
 all: myos.iso
 
@@ -12,7 +12,7 @@ boot/boot.o: boot/boot.asm
 	$(AS) $(ASFLAGS) boot/boot.asm -o boot/boot.o
 
 kernel/kernel.o: kernel/kernel.c
-	$(CC) -c kernel/kernel.c -o kernel/kernel.o $(CFLAGS) -I kernel/
+	$(CC) -c kernel/kernel.c -o kernel/kernel.o $(CFLAGS) -I kernel/ -I.
 
 kernel/gdt.o: kernel/gdt.c
 	$(CC) -c kernel/gdt.c -o kernel/gdt.o $(CFLAGS) -I kernel/
@@ -21,10 +21,16 @@ kernel/gdt_asm.o: kernel/gdt_asm.asm
 	$(AS) $(ASFLAGS) kernel/gdt_asm.asm -o kernel/gdt_asm.o
 
 kernel/idt.o: kernel/idt.c
-	$(CC) -c kernel/idt.c -o kernel/idt.o $(CFLAGS) -I kernel/
+	$(CC) -c kernel/idt.c -o kernel/idt.o $(CFLAGS) -I kernel/ -I drivers/
 
 kernel/idt_asm.o: kernel/idt_asm.asm
 	$(AS) $(ASFLAGS) kernel/idt_asm.asm -o kernel/idt_asm.o
+
+drivers/vga.o: drivers/vga.c
+	$(CC) -c drivers/vga.c -o drivers/vga.o $(CFLAGS) -I drivers/
+
+drivers/keyboard.o: drivers/keyboard.c
+	$(CC) -c drivers/keyboard.c -o drivers/keyboard.o $(CFLAGS) -I drivers/
 
 myos.bin: $(OBJS)
 	$(CC) -T linker.ld -o myos.bin $(LDFLAGS) $(OBJS)
