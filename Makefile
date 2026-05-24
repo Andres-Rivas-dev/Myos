@@ -4,7 +4,7 @@ CFLAGS  = -std=gnu99 -ffreestanding -O2 -Wall -Wextra
 ASFLAGS = -f elf32
 LDFLAGS = -ffreestanding -O2 -nostdlib -lgcc
 
-OBJS = boot/boot.o kernel/kernel.o kernel/gdt.o kernel/gdt_asm.o
+OBJS = boot/boot.o kernel/kernel.o kernel/gdt.o kernel/gdt_asm.o kernel/idt.o kernel/idt_asm.o
 
 all: myos.iso
 
@@ -19,6 +19,12 @@ kernel/gdt.o: kernel/gdt.c
 
 kernel/gdt_asm.o: kernel/gdt_asm.asm
 	$(AS) $(ASFLAGS) kernel/gdt_asm.asm -o kernel/gdt_asm.o
+
+kernel/idt.o: kernel/idt.c
+	$(CC) -c kernel/idt.c -o kernel/idt.o $(CFLAGS) -I kernel/
+
+kernel/idt_asm.o: kernel/idt_asm.asm
+	$(AS) $(ASFLAGS) kernel/idt_asm.asm -o kernel/idt_asm.o
 
 myos.bin: $(OBJS)
 	$(CC) -T linker.ld -o myos.bin $(LDFLAGS) $(OBJS)
