@@ -1,3 +1,5 @@
+lib/kprintf.o: lib/kprintf.c
+$(CC) -c lib/kprintf.c -o lib/kprintf.o $(CFLAGS) -I lib/ -I drivers/
 CC      = i686-elf-gcc
 AS      = nasm
 CFLAGS  = -std=gnu99 -ffreestanding -O2 -Wall -Wextra
