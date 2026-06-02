@@ -1,6 +1,4 @@
 #include "keyboard.h"
-<<<<<<< HEAD
-#include "keyboard.h"
 #include "vga.h"
 #include <stdint.h>
 
@@ -50,5 +48,3 @@ char keyboard_getchar() {
     kbuf_tail = (kbuf_tail + 1) % KBUF_SIZE;
     return c;
 }
-
->>>>>>> origin/dev-bryan
