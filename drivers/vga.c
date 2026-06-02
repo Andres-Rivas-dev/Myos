@@ -5,7 +5,11 @@
 #define VGA_HEIGHT 25
 #define VGA_MEM    ((volatile uint16_t*)0xB8000)
 
-static int vga_row = 0;
+/* Zona del shell: filas 2 a 23 */
+#define SHELL_TOP    2
+#define SHELL_BOTTOM 23
+
+static int vga_row = SHELL_TOP;
 static int vga_col = 0;
 static uint8_t vga_attr = 0x0A;
 
@@ -24,17 +28,18 @@ static void update_cursor() {
 }
 
 void vga_init() {
-    vga_row = 0;
-    vga_col = 0;
+    vga_row  = SHELL_TOP;
+    vga_col  = 0;
     vga_attr = 0x0A;
     vga_clear();
 }
 
 void vga_clear() {
-    int i;
-    for (i = 0; i < VGA_WIDTH * VGA_HEIGHT; i++)
-        VGA_MEM[i] = make_entry(' ', vga_attr);
-    vga_row = 0;
+    /* Solo limpia la zona del shell */
+    for (int r = SHELL_TOP; r <= SHELL_BOTTOM; r++)
+        for (int c = 0; c < VGA_WIDTH; c++)
+            VGA_MEM[r * VGA_WIDTH + c] = make_entry(' ', vga_attr);
+    vga_row = SHELL_TOP;
     vga_col = 0;
     update_cursor();
 }
@@ -43,10 +48,22 @@ void vga_set_color(uint8_t fg, uint8_t bg) {
     vga_attr = (bg << 4) | (fg & 0x0F);
 }
 
+static void scroll() {
+    /* Mueve filas SHELL_TOP+1 .. SHELL_BOTTOM hacia arriba */
+    for (int r = SHELL_TOP; r < SHELL_BOTTOM; r++)
+        for (int c = 0; c < VGA_WIDTH; c++)
+            VGA_MEM[r * VGA_WIDTH + c] = VGA_MEM[(r+1) * VGA_WIDTH + c];
+    /* Limpia la ultima fila del shell */
+    for (int c = 0; c < VGA_WIDTH; c++)
+        VGA_MEM[SHELL_BOTTOM * VGA_WIDTH + c] = make_entry(' ', vga_attr);
+    vga_row = SHELL_BOTTOM;
+}
+
 void vga_putchar(char c) {
     if (c == '\n') {
-        vga_row++;
         vga_col = 0;
+        if (vga_row >= SHELL_BOTTOM) scroll();
+        else vga_row++;
     } else if (c == '\r') {
         vga_col = 0;
     } else if (c == '\b') {
@@ -55,23 +72,14 @@ void vga_putchar(char c) {
         VGA_MEM[vga_row * VGA_WIDTH + vga_col] = make_entry(c, vga_attr);
         if (++vga_col >= VGA_WIDTH) {
             vga_col = 0;
-            vga_row++;
+            if (vga_row >= SHELL_BOTTOM) scroll();
+            else vga_row++;
         }
-    }
-    if (vga_row >= VGA_HEIGHT) {
-        int r, c;
-        for (r = 1; r < VGA_HEIGHT; r++)
-            for (c = 0; c < VGA_WIDTH; c++)
-                VGA_MEM[(r-1)*VGA_WIDTH+c] = VGA_MEM[r*VGA_WIDTH+c];
-        for (c = 0; c < VGA_WIDTH; c++)
-            VGA_MEM[(VGA_HEIGHT-1)*VGA_WIDTH+c] = make_entry(' ', vga_attr);
-        vga_row = VGA_HEIGHT - 1;
     }
     update_cursor();
 }
 
 void vga_print(const char* str) {
-    int i;
-    for (i = 0; str[i]; i++)
+    for (int i = 0; str[i]; i++)
         vga_putchar(str[i]);
 }
