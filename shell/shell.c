@@ -8,7 +8,8 @@
 #define HIST_MAX 10
 
 static char buf[BUFSIZE];
-static int  buf_len  = 0;
+static int  buf_len = 0;
+static int  buf_cur = 0;   /* indice logico en buf */
 
 static char history[HIST_MAX][BUFSIZE];
 static int  hist_count = 0;
@@ -24,14 +25,32 @@ static void hist_push(const char* cmd) {
     hist_count++;
 }
 
+/*
+ * Redibuja buf[buf_cur..buf_len] en pantalla desde la posicion actual
+ * del cursor hardware, luego borra el caracter extra si el buffer se
+ * acorto, y deja el cursor hardware apuntando a buf_cur.
+ */
+static void redraw_from_cursor() {
+    /* guardar columna de inicio (= donde esta buf_cur ahora) */
+    int start_col = vga_get_col();
+    /* pintar buf[buf_cur .. buf_len-1] */
+    for (int i = buf_cur; i < buf_len; i++) vga_putchar(buf[i]);
+    /* borrar un caracter extra por si el buffer se acorto */
+    vga_putchar(' ');
+    /* retroceder hasta start_col */
+    int end_col = vga_get_col();   /* columna despues de pintar + espacio */
+    for (int i = end_col; i > start_col; i--) vga_putchar('\b');
+}
+
+/* Borra visualmente toda la entrada actual y resetea buf */
 static void clear_input() {
-    for (int i = 0; i < buf_len; i++) {
-        vga_putchar('\b');
-        vga_putchar(' ');
-        vga_putchar('\b');
-    }
-    buf_len = 0;
-    buf[0]  = 0;
+    /* retroceder hasta buf_cur */
+    for (int i = 0; i < buf_cur; i++) vga_putchar('\b');
+    /* borrar buf_len caracteres */
+    for (int i = 0; i < buf_len; i++) vga_putchar(' ');
+    /* volver al inicio */
+    for (int i = 0; i < buf_len; i++) vga_putchar('\b');
+    buf_len = 0; buf_cur = 0; buf[0] = 0;
 }
 
 static void set_input(const char* src) {
@@ -41,8 +60,7 @@ static void set_input(const char* src) {
         buf[i] = src[i];
         vga_putchar(src[i]);
     }
-    buf[i] = 0;
-    buf_len = i;
+    buf[i] = 0; buf_len = i; buf_cur = i;
 }
 
 /* ── Apps ─────────────────────────────────────────── */
@@ -121,7 +139,7 @@ static void cmd_help() {
     vga_print("  color [n]     - cambia color (0-15)\n");
     vga_print("  history       - ver historial\n");
     vga_print("  reboot        - reinicia el sistema\n");
-    vga_print("\n  Flecha arriba/abajo: navegar historial\n");
+    vga_print("\n  Flechas: izq/der mueven cursor, arriba/abajo historial\n");
 }
 
 static void cmd_info() {
@@ -194,6 +212,7 @@ void shell_run() {
     while (1) {
         hist_idx = -1;
         buf_len  = 0;
+        buf_cur  = 0;
         buf[0]   = 0;
 
         vga_putchar('\n');
@@ -206,11 +225,25 @@ void shell_run() {
             if (!c) continue;
 
             if (c == '\n') {
+                /* avanzar cursor al final antes de saltar de linea */
+                for (int i = buf_cur; i < buf_len; i++) vga_putchar(buf[i]);
                 vga_putchar('\n');
                 buf[buf_len] = 0;
                 hist_push(buf);
                 execute(buf);
                 break;
+
+            } else if (c == KEY_LEFT) {
+                if (buf_cur > 0) {
+                    buf_cur--;
+                    vga_putchar('\b');
+                }
+
+            } else if (c == KEY_RIGHT) {
+                if (buf_cur < buf_len) {
+                    vga_putchar(buf[buf_cur]);
+                    buf_cur++;
+                }
 
             } else if (c == KEY_UP) {
                 int avail = hist_count > HIST_MAX ? HIST_MAX : hist_count;
@@ -229,21 +262,24 @@ void shell_run() {
                 }
 
             } else if (c == '\b') {
-                if (buf_len > 0) {
-                    buf_len--;
+                if (buf_cur > 0) {
+                    /* eliminar caracter en buf_cur-1 */
+                    for (int i = buf_cur-1; i < buf_len-1; i++) buf[i] = buf[i+1];
+                    buf_len--; buf_cur--;
                     buf[buf_len] = 0;
                     vga_putchar('\b');
-                    vga_putchar(' ');
-                    vga_putchar('\b');
+                    redraw_from_cursor();
                 }
 
-            } else if (c == KEY_LEFT || c == KEY_RIGHT) {
-                /* ignorar por ahora - sin insercion en medio */
-
             } else if (buf_len < BUFSIZE - 1) {
-                buf[buf_len++] = c;
-                buf[buf_len]   = 0;
+                /* insertar en buf_cur */
+                for (int i = buf_len; i > buf_cur; i--) buf[i] = buf[i-1];
+                buf[buf_cur] = c;
+                buf_len++; buf_cur++;
+                buf[buf_len] = 0;
+                /* pintar c y redibujar el resto */
                 vga_putchar(c);
+                redraw_from_cursor();
             }
         }
     }

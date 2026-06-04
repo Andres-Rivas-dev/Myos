@@ -16,6 +16,11 @@ static uint8_t vga_attr = 0x0A;
 static inline void outb(uint16_t port, uint8_t val) {
     __asm__ volatile ("outb %0, %1" : : "a"(val), "Nd"(port));
 }
+static inline uint8_t inb(uint16_t port) {
+    uint8_t r;
+    __asm__ volatile ("inb %1, %0" : "=a"(r) : "Nd"(port));
+    return r;
+}
 
 static inline uint16_t make_entry(char c, uint8_t attr) {
     return (uint16_t)c | ((uint16_t)attr << 8);
@@ -42,6 +47,7 @@ void vga_clear() {
     vga_row = SHELL_TOP;
     vga_col = 0;
     update_cursor();
+    vga_cursor_enable();
 }
 
 void vga_set_color(uint8_t fg, uint8_t bg) {
@@ -82,4 +88,15 @@ void vga_putchar(char c) {
 void vga_print(const char* str) {
     for (int i = 0; str[i]; i++)
         vga_putchar(str[i]);
+}
+
+int vga_get_col() { return vga_col; }
+
+
+void vga_cursor_enable() {
+    /* Activar cursor hardware: scanlines 14-15 (cursor al final del caracter) */
+    outb(0x3D4, 0x0A);
+    outb(0x3D5, (inb(0x3D5) & 0xC0) | 14);
+    outb(0x3D4, 0x0B);
+    outb(0x3D5, (inb(0x3D5) & 0xE0) | 15);
 }

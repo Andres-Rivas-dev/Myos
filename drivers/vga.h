@@ -13,9 +13,14 @@ typedef enum {
 } vga_color_t;
 
 void vga_init();
+void vga_cursor_enable();
 void vga_clear();
 void vga_putchar(char c);
 void vga_print(const char* str);
 void vga_set_color(uint8_t fg, uint8_t bg);
 
 #endif
+
+int vga_get_col();
+
+int vga_get_col();
